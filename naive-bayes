@@ -1,0 +1,102 @@
+import numpy as np
+import re
+def textparse(bigstring):
+    listoftokens=re.split(r'\w*',bigstring)
+    return [tok.lower() for tok in listoftokens if len(tok)>2]
+#def spamtest():
+#    doclist=[];classlist=[];fulltext=[]
+#    for i in range(1,26):
+#        wordlist=textparse(open('email/spam/%d.txt' % i).read())
+#        doclist.append(wordlist)
+#        fulltext.extend(wordlist)
+#        classlist.append(1)
+#        wordlist=textparse(open('email/ham/%d.txt' % i).read())
+#        doclist.append(wordlist)
+#        fulltext.extend(wordlist)
+#        classlist.append(0)
+#    vocablist=createvocablist(doclist)
+#    trainingset=range(50);testset=[]
+#    for i in range(10):
+#        randindex=int(random.uniform(0,len(trainingset)))
+#        testset.append(trainingset[randindex])
+#        del(trainingset[randindex])
+#    trainmat=[];trainclasses=[]
+#    for docindex in trainclasses:
+#        trainmat.append(setofwords2vec(vocablist,doclist[docindex]))
+#        trainclasses.append(classlist[docindex])
+#    p0v,p1v,pspam=trainnb0(array(trainmat,array(trainclasses)))
+#    errorcount=0
+def classifyNB(vec2classify,p0vec,p1vec,pclass1):
+    p1=sum(vec2classify*p1vec)+np.log(pclass1)
+    p0=sum(vec2classify*p0vec)+np.log(1.0-pclass1)
+    #print(p1)
+    #print(p0)
+    if p1>p0:
+        return 1
+    else:
+        return 0
+def testingnb():
+    listoposts,listclasses=loaddataset()
+    myvocablist=createvocablist(listoposts)
+    trainmat=[]
+    for postindoc in listoposts:
+        trainmat.append(setofwords2vec(myvocablist,postindoc))#每个句子去检查侮辱性单词的比例和正常言论单词的比例，如果有一个句子，就计算一遍
+        p0v,p1v,pab=trainNB0(np.array(trainmat),np.array(listclasses))#接着有两个句子，计算方法如上，不断累加句子数量，不断更新各个比例
+        testentry=['love','my','dalmation']
+        thisdoc=np.array(setofwords2vec(myvocablist,testentry))
+        print(testentry,'calssified as:',classifyNB(thisdoc,p0v,p1v,pab))
+        testentry=['stupid','garbage']
+        thisdoc=np.array(setofwords2vec(myvocablist,testentry))
+        print(testentry,'calssified as:',classifyNB(thisdoc,p0v,p1v,pab))
+def trainNB0(trainmatrix,traincategory):
+    numtraindocs=len(trainmatrix)#计算这个训练集总共的行数
+    numwords=len(trainmatrix[0])#第一行的单词数
+    pabusive=sum(traincategory)/float(numtraindocs)#侮辱性语句在总语句数的比例，这里是3/6=0.5
+    p0num=np.ones(numwords)#构建两个大小为32个单词量的矩阵
+    p1num=np.ones(numwords)
+    p0denom=2.0
+    p1denom=2.0
+    for i in range(numtraindocs):
+        if traincategory[i]==1:
+            p1num+=trainmatrix[i]#每个侮辱性言论中单词的数量
+            p1denom+=sum(trainmatrix[i])#总共单词数量
+        else:
+            p0num+=trainmatrix[i]#每个正常言论中单词的数量
+            p0denom+=sum(trainmatrix[i])##总共单词数量
+    p1vect=np.log(p1num/p1denom)
+    p0vect=np.log(p0num/p0denom)
+    return p0vect,p1vect,pabusive
+def loaddataset():
+    postinglist=[['my','dog','has','flea','problems','help','please'],
+                 ['maybe','not','take','him','to','dog','park','stupid'],
+                 ['my','dalmation','is','so','cute','i','love','him'],
+                 ['stop','posting','stupid','worthless','garbage'],
+                 ['mr','licks','ate','my','steak','how','to','stop','him'],
+                 ['quit','buying','worthless','dog','food','stupid']]
+    classvec=[0,1,0,1,0,1]#1代表侮辱性文字，0代表正常言论
+    return postinglist,classvec
+def createvocablist(dataset):
+    vocabset=set([])#创建一个空的集合
+    for document in dataset:
+        vocabset=vocabset|set(document)#并集，去重
+    return list(vocabset)#返回数据集中不重复，唯一的单词，就是取出文本中用的单词的种类
+def bagofword2vecmn(vocablist,inputset):
+    returnvec=[0]*len(vocablist)
+    for word in inputset:
+        if word in vocablist:
+            returnvec[vocablist.index(word)]+=1
+        else:
+            print("the word: %s is not in my vocabulary" %word)
+    return returnvec
+def setofwords2vec(vocablist,inputset):
+    returnvec=[0]*len(vocablist)#创建一个32个数据大小集合，其值为0
+    for word in inputset:
+        if word in vocablist:
+            returnvec[vocablist.index(word)]=1
+        else:
+            print("the word: %s is not in my vocabulary" %word)
+    return returnvec
+emailtext=open('email/ham/6.txt').read()
+print(emailtext)
+listoftokens=re.split(emailtext)
+print(listoftokens)

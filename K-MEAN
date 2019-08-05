@@ -1,0 +1,82 @@
+import tensorflow as tf
+from tensorflow.examples.tutorials.mnist import input_data
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+def disteclud(veca,vecb):
+    return np.sqrt(np.sum(np.power(veca-vecb,2)))
+
+def bikmeans(dataset,k,distmeans=disteclud):
+    m=np.shape(dataset)[0]
+    clusterassment=np.mat(np.zeros((m,2)))
+    centroid0=np.mean(dataset,axis=0).tolist()[0]
+    centlist=[centroid0]
+    for j in range(m):
+        clusterassment[j,1]=distmeans(np.mat(centroid0),dataset[j,:])**2
+    while(len(centlist)<k):
+        lowestsse=np.inf
+        for i in range(len(centlist)):
+            ptsincurrcluster=dataset[np.nonzero(clusterassment[:,0].A==i)[0],:]
+            centroidmat,splitclustass=kmeans(ptsincurrcluster,2,distmeans)
+            ssesplit=np.sum(splitclustass[:,1])
+            ssenotsplit=np.sum(clusterassment[np.nonzero(clusterassment[:,0].A!=i)[0],1])
+            print("ssesplit, and notsplit:",ssesplit,ssenotsplit)
+            if (ssesplit+ssenotsplit)<lowestsse:
+                bestcenttosplit=i
+                bestnewcents=centroidmat
+                bestclustass=splitclustass.copy()
+                lowestsse=ssesplit+ssenotsplit
+        bestclustass[np.nonzero(bestclustass[:,0].A==1)[0],0]=len(centlist)
+        bestclustass[np.nonzero(bestclustass[:,0].A==0)[0],0]=bestcenttosplit
+        print("the bestcenttosplit is :",bestcenttosplit)
+        print("the len of bestclustass is:",len(bestclustass))
+        centlist[bestcenttosplit]=bestnewcents[0,:]
+        centlist.append(bestnewcents[1,:])
+        clusterassment[np.nonzero(clusterassment[:,0].A==bestcenttosplit)[0],:]=bestclustass
+    return np.mat(centlist),clusterassment
+            
+            
+def loaddataset(filename):
+    datamat=[]
+    fr=open(filename)
+    for line in fr.readlines():
+        curline=line.strip().split('\t')
+        fltline=list(map(float,curline))
+        datamat.append(fltline)
+    return datamat
+def randcent(dataset,k):
+    
+    n=np.shape(dataset)[1]
+    centroids=np.mat(np.zeros((k,n)))
+    for j in range(n):
+        minj=min(dataset[:,j])
+        rangej=float(max(dataset[:,j])-minj)
+        centroids[:,j]=np.mat(minj+rangej*np.random.rand(k,1))
+    return centroids
+def kmeans(dataset,k,distmeas=disteclud,createcent=randcent):
+    m=np.shape(dataset)[0]
+    clusterassment=np.mat(np.zeros((m,2)))
+    centroids=createcent(dataset,k)
+    clusterchanged=True
+    #print(centroids)
+    while clusterchanged:
+        clusterchanged=False
+        for i in range(m):
+            mindist=np.inf;minindex=-1
+            for j in range(k):
+                distji=distmeas(centroids[j,:],dataset[i,:])
+                print(distji)
+                if distji<mindist:
+                    mindist=distji;minindex=j
+            if clusterassment[i,0]!=minindex:clusterchanged=True
+            clusterassment[i,:]=minindex,mindist**2
+        print(centroids)
+        for cent in range(k):
+             ptsinclust=dataset[np.nonzero(clusterassment[:,0].A==cent)[0]]
+             centroids[cent,:]=np.mean(ptsinclust,axis=0)
+    return centroids,clusterassment
+datmat=np.mat(loaddataset('testSet.txt'))
+#print(datmat)
+mycentroids,clustassing=bikmeans(datmat,4)
+print(mycentroids)
+print(clustassing)

@@ -1,0 +1,54 @@
+import numpy as np
+import matplotlib.pyplot as plt
+def lwlr(testpoint,xarr,yarr,k=1.0):
+    xmat=np.mat(xarr);ymat=np.mat(yarr).T
+    #print(ymat)
+    m=np.shape(xmat)[0]
+    weights=np.mat(np.eye((m)))#生产对角矩阵，对角线上全是1
+    for j in  range(m):
+        diffmat=testpoint-xmat[j,:]
+        weights[j,j]=np.exp(diffmat*diffmat.T/(-2.0*k**2))
+    xtx=xmat.T*(weights*xmat)
+    if np.linalg.det(xtx)==0.0:
+        print("this matrix is singular")
+        return
+    ws=xtx.I*(xmat.T*(weights*ymat))
+    return testpoint*ws
+def lwlrtest(testarr,xarr,yarr,k=1.0):
+    m=np.shape(testarr)[0]
+    yhat=np.zeros(m)
+    for i in range(m):
+        yhat[i]=lwlr(testarr[i],xarr,yarr,k)
+    return yhat
+def loaddataset(filename):
+    numfeat=len(open(filename).readline().split('\t'))-1
+    datamat=[];labelmat=[]
+    fr=open(filename)
+    for line in fr.readlines():
+        linearr=[]
+        curline=line.strip().split('\t')
+        for i in range(numfeat):
+            linearr.append(float(curline[i]))
+        datamat.append(linearr)
+        labelmat.append(float(curline[-1]))
+    return datamat,labelmat
+def standregres(xarr,yarr):
+    xmat=np.mat(xarr);ymat=np.mat(yarr).T
+    xtx=xmat.T*xmat
+    #print(xtx.I)#逆矩阵
+    if np.linalg.det(xtx)==0.0:#判读是否是可逆矩阵
+        print("this matrix is singular")
+        return
+    ws=xtx.I*(xmat.T*ymat)
+    return ws
+xarr,yarr=loaddataset('ex0.txt')
+xmat=np.mat(xarr)
+srtind=xmat[:,1].argsort(0)#索引排序
+xsort=xmat[srtind][:,0,:]
+yhat=lwlrtest(xarr,xarr,yarr,0.003)
+fig=plt.figure()
+ax=fig.add_subplot(111)
+ax.plot(xsort[:,1],yhat[srtind])
+ax.scatter(xmat[:,1].flatten().A[0],np.mat(yarr).T.flatten().A[0],s=2,c='red')
+plt.show()
+#print(yhat)
