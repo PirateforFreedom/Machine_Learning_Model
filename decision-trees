@@ -1,0 +1,87 @@
+from math import log
+import operator
+def classify(inputtree,featlabels,testvec):
+    firststr=inputtree.keys()[0]
+    seconddict=inputtree[firststr]
+    featindex=featlabels.index(firststr)
+    for key in seconddict.keys():
+        if testvec[featindex]==key:
+            if type(seconddict[key])._name_=='dict':
+                classlabel=classify(seconddict[key],featlabels,testvec)
+            else:
+                classlabel=seconddict[key]
+    return classlabel
+def createtree(dataset,labels):
+    classlist=[example[-1] for example in dataset]#把数据集的标签提取出来
+    if classlist.count(classlist[0])==len(classlist):#如果第一个标签就是全部数据据的标签，就返回这个标签，不用建树了。
+        return classlist[0]
+    if len(dataset[0])==1:#如果数据集只有标签就按得票率算出最高的得票率的标签。---特殊情况
+        return majoritycnt(classlist)
+    bestfeat=choosebestfeaturetosplit(dataset)#选出这个数据集香农熵最高的特征
+    bestfeatlabel=labels[bestfeat]#选出这个这个标签的名称
+    mytree={bestfeatlabel:{}}#构造树根节点
+    del(labels[bestfeat])#从标签中删除那个选中的特征
+    featvalues=[example[bestfeat] for example in dataset]#提取出0特征的特征值
+    uniquevals=set(featvalues)#去除重复值
+    for value in uniquevals:
+        sublabels=labels[:]
+        mytree[bestfeatlabel][value]=createtree(splitdataset(dataset,bestfeat,value),sublabels)
+    return mytree
+def majoritycnt(classlist):
+    classcount={}
+    for vote in classlist:
+        if vote not in classcount.keys():
+            classcount[vote]=0
+        classcount[vote]+=1
+    sortedclasscount=sorted(classcount.iteritems(),key=operator.itemgetter(1),reverse=True)
+    return sortedclasscount[0][0]
+def choosebestfeaturetosplit(dataset):
+    numfeatures=len(dataset[0])-1#计算特征的个数
+    baseentropy=calcshannonent(dataset)
+    bestinfogain=0.0;bestfeature=-1
+    for i in range(numfeatures):
+        featlist=[example[i] for example in dataset]#形成特征的特征值
+        uniquevals=set(featlist)#把每个特征下的特征值，重复的去掉。
+        newentropy=0.0
+        for value in uniquevals:
+            subdataset=splitdataset(dataset,i,value)#数据集按照每个特征的特征值，进行子集划分。
+            prob=len(subdataset)/float(len(dataset))#计算子集划分后，子集元素的个数占整个数据集的比例
+            newentropy+=prob*calcshannonent(subdataset)#计算每个子集的香农商，然后累加
+            infogain=baseentropy-newentropy
+            #print(infogain)
+            if(infogain>bestinfogain):#信息增益最大的那个子集，属于哪个特征，那个特征就是划分数据集的最好特征。
+                bestinfogain=infogain
+                bestfeature=i
+    return bestfeature
+def splitdataset(dataset,axis,value):
+    retdataset=[]
+    for featvec in dataset:
+        if featvec[axis]==value:
+            reducedfeatvec=featvec[:axis]
+            reducedfeatvec.extend(featvec[axis+1:])#根据特征值进行抽取子数据集
+            retdataset.append(reducedfeatvec)
+    return retdataset
+def createdataset():
+    dataset=[[1,1,'yes'],
+             [1,1,'yes'],
+             [1,0,'no'],
+             [0,1,'no'],
+             [0,1,'no']]
+    labels=['no surfacing','flippers']
+    return dataset,labels
+def calcshannonent(dataset):
+    numentries=len(dataset)#计算香农熵，计算整个数据集的行数
+    labelcounts={}
+    for featvec in dataset:#遍历数据集中的数据行
+        currentlabel=featvec[-1]#看当前行数据的标签
+        if currentlabel not in labelcounts.keys():#看是否当前行的标签在标签集合中，如果不在，就增加一条，并计数为0
+            labelcounts[currentlabel]=0
+        labelcounts[currentlabel]+=1#如果存在就按照标签，把它的计数增加1，当循环后，labelcount存储的是整个数据集每个标签的得票数
+    shannonent=0.0
+    for key in labelcounts:
+        prob=float(labelcounts[key])/numentries#每个标签的得票数除以整个数据集的行数，得出每个标签的占比（概率）
+        shannonent-=prob*log(prob,2)#套上香农公式，概率乘以，log（概率，2）
+    return shannonent#返回香农商,整个数据集的香农商。
+mydat,labels=createdataset()
+mytree=createtree(mydat,labels)
+print(mytree)
