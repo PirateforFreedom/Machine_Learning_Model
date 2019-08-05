@@ -1,0 +1,34 @@
+import matplotlib.pyplot as plt
+import numpy as np
+def loaddataset(filename,delim='\t'):
+    fr=open(filename)
+    stringarr=[line.strip().split(delim) for line in fr.readlines()]
+    datarr=[list(map(float,line)) for line in stringarr]
+    return np.mat(datarr)
+def pca(datamat,topnfeat=9999999):
+    meanvals=np.mean(datamat,axis=0)
+    #print(meanvals)
+    meanremoved=datamat-meanvals
+    #print(meanremoved)
+    covmat=np.cov(meanremoved,rowvar=0)#求协方差
+    #print(covmat)
+    eigvals,eigvects=np.linalg.eig(np.mat(covmat))
+    #print(eigvals)
+    #print(eigvects)
+    eigvalind=np.argsort(eigvals)
+    eigvalind=eigvalind[:-(topnfeat+1):-1]
+    #print(eigvalind)
+    redeigvects=eigvects[:,eigvalind]
+    #print(redeigvects)
+    lowddatamat=meanremoved*redeigvects
+    #print(lowddatamat)
+    reconmat=(lowddatamat*redeigvects.T)+meanvals
+    return lowddatamat,reconmat
+datamat=loaddataset('testSet.txt')
+lowdmat,reconmat=pca(datamat,1)
+print(datamat)
+print(reconmat)
+fig=plt.figure()
+ax=fig.add_subplot(111)
+ax.scatter(datamat[:,0].flatten().A[0],datamat[:,1].flatten().A[0],marker='^',s=90)
+ax.scatter(reconmat[:,0].flatten().A[0],reconmat[:,1].flatten().A[0],marker='o',s=50,c='red')
