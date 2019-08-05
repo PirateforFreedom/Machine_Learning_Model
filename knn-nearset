@@ -1,0 +1,64 @@
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+import pandas as pd
+import tensorflow as tf
+import operator
+def datingclasstest():
+    horatio=0.10
+    datingdatamat,datinglabels=file2matrix("datingTestSet2.txt")
+    normmat,ranges,minvals=autonorm(datingdatamat)
+    m=normmat.shape[0]#1000
+    numtestvecs=int(m*horatio)#100
+    errorcount=0.0
+    #print(normmat[0,:])
+    for i in range(numtestvecs):
+        classifierresult=classify0(normmat[i,:],normmat[numtestvecs:m,:],#把数据集1000条数据，三个特征值，一个标签分成训练集和测试集
+                                   datinglabels[numtestvecs:m],3)#测试集为【0.100】，训练集【100,1000】，标签【100,1000】，预测测试集的标签。
+        print("the classifre came back with:%d,the real answer is:%d" %(classifierresult,datinglabels[i]))
+        if (classifierresult !=datinglabels[i]):
+            errorcount+=1.0
+    print("the total error rate is:%f" %(errorcount/float(numtestvecs)))
+def autonorm(dataset):
+    minvals=dataset.min(0)
+    maxvals=dataset.max(0)
+    ranges=maxvals-minvals
+    normdataset=np.zeros(np.shape(dataset))
+    m=dataset.shape[0]
+    normdataset=dataset-np.tile(minvals,(m,1))
+    normdataset=normdataset/np.tile(ranges,(m,1))
+    return normdataset,ranges,minvals
+def file2matrix(filename):
+    fr=open(filename)
+    arrayolines=fr.readlines()
+    numberoflines=len(arrayolines)
+    returnmat=np.zeros((numberoflines,3))
+    classlabelvector=[]
+    index=0
+    for line in arrayolines:
+        line=line.strip()
+        listfromline=line.split('\t')
+        returnmat[index,:]=listfromline[0:3]
+        classlabelvector.append(int(listfromline[-1]))
+        index+=1
+    return returnmat,classlabelvector
+def createDataSet():
+    group=np.array([[1.0,1.1],[1.0,1.0],[0,0],[0,0.1]])
+    labels=['A','A','B','B']
+    return group,labels
+def classify0(inx,dataset,labels,k):#[0,100],[100,1000],[100,10000]的标签，k=3，最近邻的3个元素为基础。
+    datasetsize=dataset.shape[0]#900
+    diffmat=np.tile(inx,(datasetsize,1))-dataset#np.tile(a,(b,z))把a沿着x轴复制z倍，沿着y轴复制b倍（【0,0】，（4,1））
+    #这里就是把【0,0】，沿着x轴复制1倍，沿着y轴复制4倍，变成4X2矩阵。求两者之间的距离，然后平方。
+    sqdiffmat=diffmat**2#距离平方4x2
+    sqdistances=sqdiffmat.sum(axis=1)#按行累加距离---1X4
+    distances=sqdistances**0.5#开根号
+    sorteddistindicies=distances.argsort()#argsort按距离值递增排序，输出排序后值的索引。最终存储的是离测试样本最近的k个样本的坐标
+    classcount={}#
+    for i in range(k):
+        voteilabel=labels[sorteddistindicies[i]]#k=3，所以会选择和测试样本最近的三个样本，这里是【b，b，a】
+        classcount[voteilabel]=classcount.get(voteilabel,0)+1#存储最近三个样本中的类别得票数这里是b为2票，a为1票
+    sortedclasscount=sorted(classcount.items(),
+                            key=operator.itemgetter(1),reverse=True)#itemgetter函数用于获取对象的哪些维的数据，重新排序
+    return sortedclasscount[0][0]#从大到小排序。输出最相似的类别。
+datingclasstest()
